@@ -27,6 +27,7 @@ desktop.ini
 .env.*.local
 .env.backup
 *.env
+.webhook_secret
 
 # Laravel specific
 /vendor/
