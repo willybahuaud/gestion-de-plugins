@@ -52,12 +52,12 @@ Construire une **plateforme centrale invisible** qui sert de couche d'abstractio
 │ WordPress   │              │   CENTRALE          │              │ installé    │
 │             │◄── webhook ──│   (Laravel 12)      │              │ chez client │
 └─────────────┘              │                     │              └─────────────┘
-                              │  - Licences        │
-                              │  - Users (SSO)     │
-                              │  - Releases        │
-                              │  - Webhooks out    │
-                              │  - Back-office     │
-                              └─────────────────────┘
+                             │  - Licences         │
+                             │  - Users (SSO)      │
+                             │  - Releases         │
+                             │  - Webhooks out     │
+                             │  - Back-office      │
+                             └─────────────────────┘
                                          │
                               ┌──────────┴──────────┐
                               │    Backblaze B2     │
@@ -107,7 +107,7 @@ Construire une **plateforme centrale invisible** qui sert de couche d'abstractio
 | Framework | Laravel 12 | Écosystème mature, compatible mutualisé |
 | PHP | 8.2+ | Requis par Laravel 12 |
 | Base de données | MySQL | Disponible chez o2switch |
-| Cache | Fichier (puis Redis) | Adapté au mutualisé |
+| Cache | Redis | Disponible chez o2switch |
 | Paiement | Stripe + Stripe Tax | Gestion complète paiements/TVA |
 | Stockage fichiers | Backblaze B2 | Économique, signed URLs |
 | Protection DDoS | Cloudflare | Gratuit, proxy |
@@ -118,7 +118,7 @@ Construire une **plateforme centrale invisible** qui sert de couche d'abstractio
 
 - Queues en mode `sync` ou via `schedule:run` (cron toutes les minutes)
 - Pas de worker persistant
-- Cache fichier plutôt que Redis
+- Redis disponible (mode Socket recommandé)
 - Logs rotatifs pour ne pas saturer l'espace
 
 ---
@@ -690,7 +690,7 @@ Les autres notifications (client) sont gérées par les sites de vente via les w
 **Configuration :**
 - PHP 8.2+
 - MySQL 8.0
-- Cache fichier
+- Redis (mode Socket)
 - Queues en mode sync
 - Cron `* * * * * php artisan schedule:run`
 
@@ -703,8 +703,7 @@ Les autres notifications (client) sont gérées par les sites de vente via les w
 
 Quand passer sur VPS :
 - Charge trop importante pour mutualisé
-- Besoin de queues asynchrones
-- Besoin de Redis pour cache/sessions
+- Besoin de queues asynchrones (workers persistants)
 
 VPS recommandé : Hetzner CAX11 (~4€/mois) ou OVH Starter
 
@@ -757,7 +756,7 @@ Sous-domaine de `wabeo.work` (ex: `api.wabeo.work`, `hub.wabeo.work`, etc.)
 |-------|----------|
 | Framework | Laravel 12 |
 | Base de données | MySQL |
-| Cache | Fichier (puis Redis) |
+| Cache | Redis |
 | Stockage fichiers | Backblaze B2 |
 | Paiement | Stripe |
 | TVA | Stripe Tax |

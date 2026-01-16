@@ -16,7 +16,7 @@ Plateforme centrale de gestion de plugins WordPress. Sert de couche d'abstractio
 - **Database**: MySQL
 - **File Storage**: Backblaze B2 (signed URLs)
 - **Payments**: Stripe + Stripe Tax
-- **Cache**: File-based initially (Redis later)
+- **Cache**: Redis (disponible chez o2switch)
 - **Hosting**: o2switch mutualisé (shared hosting constraints)
 
 ## Architecture
