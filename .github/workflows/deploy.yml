@@ -14,32 +14,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install expect
-        run: sudo apt-get update && sudo apt-get install -y expect
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Setup SSH with passphrase
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
-          # Add host to known_hosts
-          ssh-keyscan -H $SSH_HOST >> ~/.ssh/known_hosts
-
-          # Start ssh-agent
-          eval "$(ssh-agent -s)"
-
-          # Add key with passphrase using expect
-          expect << EOF
-          spawn ssh-add ~/.ssh/deploy_key
-          expect "Enter passphrase"
-          send "$SSH_PASSPHRASE\r"
-          expect eof
-          EOF
+      - name: Add host to known_hosts
+        run: ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy via rsync
         env:
@@ -56,7 +37,7 @@ jobs:
             --exclude 'storage/framework/cache/*' \
             --exclude 'storage/framework/sessions/*' \
             --exclude 'storage/framework/views/*' \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            -e "ssh -o StrictHostKeyChecking=no" \
             ./ ${SSH_USER}@${SSH_HOST}:${SSH_PATH}/
 
       - name: Run post-deploy commands
@@ -65,9 +46,9 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_PATH: ${{ secrets.SSH_PATH }}
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${SSH_USER}@${SSH_HOST} << ENDSSH
+          ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SSH_HOST} << 'ENDSSH'
             set -e
-            cd ${SSH_PATH}
+            cd ${{ secrets.SSH_PATH }}
 
             # Install composer dependencies (if composer.json exists)
             if [ -f "composer.json" ]; then
