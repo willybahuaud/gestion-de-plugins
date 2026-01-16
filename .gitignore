@@ -1,0 +1,67 @@
+# System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*~
+*.sublime-project
+*.sublime-workspace
+.project
+.settings/
+*.code-workspace
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.backup
+*.env
+
+# Laravel specific
+/vendor/
+/node_modules/
+/public/hot
+/public/storage
+/storage/*.key
+Homestead.json
+Homestead.yaml
+auth.json
+npm-debug.log
+yarn-error.log
+
+# Logs
+*.log
+logs/
+
+# Cache
+*.cache
+.phpunit.result.cache
+.php-cs-fixer.cache
+
+# Build artifacts
+/public/build/
+/public/mix-manifest.json
+
+# Testing
+/coverage/
+.phpunit.result.cache
+
+# Composer
+composer.phar
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
