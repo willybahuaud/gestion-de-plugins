@@ -11,6 +11,7 @@ use App\Services\StripeService;
 use App\Services\WebhookService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Stripe\Event;
@@ -42,6 +43,15 @@ class StripeWebhookController extends Controller
             'type' => $event->type,
             'id' => $event->id,
         ]);
+
+        // Idempotence: vérifier si l'événement a déjà été traité
+        if ($this->wasEventProcessed($event->id)) {
+            Log::info('Stripe webhook already processed', ['id' => $event->id]);
+            return response('Already processed', 200);
+        }
+
+        // Marquer l'événement comme traité (avant traitement pour éviter les race conditions)
+        $this->markEventAsProcessed($event->id, $event->type);
 
         return match ($event->type) {
             'checkout.session.completed' => $this->handleCheckoutCompleted($event),
@@ -272,5 +282,27 @@ class StripeWebhookController extends Controller
         $this->webhookService->licenseCreated($license);
 
         return $license;
+    }
+
+    /**
+     * Vérifie si un événement Stripe a déjà été traité.
+     */
+    private function wasEventProcessed(string $eventId): bool
+    {
+        return DB::table('stripe_processed_events')
+            ->where('event_id', $eventId)
+            ->exists();
+    }
+
+    /**
+     * Marque un événement Stripe comme traité.
+     */
+    private function markEventAsProcessed(string $eventId, string $eventType): void
+    {
+        DB::table('stripe_processed_events')->insertOrIgnore([
+            'event_id' => $eventId,
+            'event_type' => $eventType,
+            'processed_at' => now(),
+        ]);
     }
 }
