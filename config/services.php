@@ -41,4 +41,9 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
+    'admin' => [
+        'email' => env('ADMIN_EMAIL'),
+        'notify_new_purchase' => env('ADMIN_NOTIFY_NEW_PURCHASE', true),
+    ],
+
 ];

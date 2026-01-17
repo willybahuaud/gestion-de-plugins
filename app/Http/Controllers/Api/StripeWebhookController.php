@@ -8,8 +8,10 @@ use App\Models\Invoice;
 use App\Models\License;
 use App\Models\Price;
 use App\Models\User;
+use App\Notifications\NewPurchaseNotification;
 use App\Services\StripeService;
 use App\Services\WebhookService;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
@@ -322,7 +324,33 @@ class StripeWebhookController extends Controller
         // Déclencher le webhook sortant
         $this->webhookService->licenseCreated($license);
 
+        // Notifier l'admin du nouvel achat
+        $this->notifyAdminNewPurchase($license);
+
         return $license;
+    }
+
+    /**
+     * Envoie un email à l'admin pour un nouvel achat.
+     */
+    private function notifyAdminNewPurchase(License $license): void
+    {
+        $adminEmail = config('services.admin.email');
+        $shouldNotify = config('services.admin.notify_new_purchase', true);
+
+        if (!$adminEmail || !$shouldNotify) {
+            return;
+        }
+
+        try {
+            Notification::route('mail', $adminEmail)
+                ->notify(new NewPurchaseNotification($license));
+        } catch (\Exception $e) {
+            Log::warning('Failed to send new purchase notification', [
+                'license_id' => $license->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
