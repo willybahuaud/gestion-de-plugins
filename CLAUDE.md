@@ -77,3 +77,7 @@ https://hub.wabeo.work
 - Queues en mode `sync` (pas de workers persistants)
 - EUR uniquement comme devise
 - TVA gérée par Stripe Tax
+
+## Fichiers locaux (ne pas commiter)
+
+- `JOURNAL.md` - Journal de développement, reste en local uniquement (dans .gitignore)
