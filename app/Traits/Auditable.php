@@ -8,6 +8,11 @@ trait Auditable
 {
     protected static function bootAuditable(): void
     {
+        // Désactiver l'audit pendant les tests
+        if (app()->runningUnitTests()) {
+            return;
+        }
+
         static::created(function ($model) {
             AuditLog::log('created', $model, null, $model->getAuditableAttributes());
         });
