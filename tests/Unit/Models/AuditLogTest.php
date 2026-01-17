@@ -56,7 +56,7 @@ class AuditLogTest extends TestCase
         // Refresh to clear the cached relation
         $log->refresh();
 
-        $this->assertStringContains('Product', $log->model_label);
+        $this->assertStringContainsString('Product', $log->model_label);
     }
 
     public function test_model_label_for_null_model(): void

@@ -24,14 +24,19 @@ class LicenseApiTest extends TestCase
         parent::setUp();
 
         $this->product = Product::factory()->create(['slug' => 'test-plugin']);
-        $this->price = Price::factory()->create(['product_id' => $this->product->id]);
+        $this->price = Price::factory()->create([
+            'product_id' => $this->product->id,
+            'max_activations' => 3,
+        ]);
         $this->user = User::factory()->create();
         $this->license = License::factory()->create([
+            'license_key' => 'test-license-key-uuid',
             'user_id' => $this->user->id,
             'product_id' => $this->product->id,
             'price_id' => $this->price->id,
             'status' => 'active',
             'max_activations' => 3,
+            'expires_at' => now()->addYear(),
         ]);
     }
 
@@ -108,10 +113,11 @@ class LicenseApiTest extends TestCase
 
     public function test_verify_returns_valid_for_activated_domain(): void
     {
-        Activation::factory()->create([
+        Activation::create([
             'license_id' => $this->license->id,
             'domain' => 'example.com',
             'is_active' => true,
+            'activated_at' => now(),
         ]);
 
         $response = $this->postJson('/api/license/verify', [
@@ -151,10 +157,11 @@ class LicenseApiTest extends TestCase
 
     public function test_activate_reuses_existing_activation(): void
     {
-        Activation::factory()->create([
+        Activation::create([
             'license_id' => $this->license->id,
             'domain' => 'existing.com',
             'is_active' => true,
+            'activated_at' => now(),
         ]);
 
         $response = $this->postJson('/api/license/activate', [
@@ -174,9 +181,18 @@ class LicenseApiTest extends TestCase
     {
         $this->license->update(['max_activations' => 2]);
 
-        Activation::factory()->count(2)->create([
+        // Créer 2 activations pour cette licence
+        Activation::create([
             'license_id' => $this->license->id,
+            'domain' => 'site1.com',
             'is_active' => true,
+            'activated_at' => now(),
+        ]);
+        Activation::create([
+            'license_id' => $this->license->id,
+            'domain' => 'site2.com',
+            'is_active' => true,
+            'activated_at' => now(),
         ]);
 
         $response = $this->postJson('/api/license/activate', [
@@ -194,10 +210,11 @@ class LicenseApiTest extends TestCase
 
     public function test_deactivate_removes_activation(): void
     {
-        Activation::factory()->create([
+        Activation::create([
             'license_id' => $this->license->id,
             'domain' => 'todeactivate.com',
             'is_active' => true,
+            'activated_at' => now(),
         ]);
 
         $response = $this->postJson('/api/license/deactivate', [
