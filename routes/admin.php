@@ -27,6 +27,11 @@ Route::middleware('guest:admin')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('admin.login');
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:admin-login');
 
+    // Vérification email pour passkey (rate limit 5/5min contre énumération)
+    Route::post('/check-email', [AuthController::class, 'checkEmail'])
+        ->middleware('throttle:5,5')
+        ->name('admin.check-email');
+
     // Passkey authentication
     Route::post('/passkey/login-options', [PasskeyController::class, 'loginOptions'])->name('admin.passkey.login-options');
     Route::post('/passkey/login', [PasskeyController::class, 'login'])->name('admin.passkey.login');
