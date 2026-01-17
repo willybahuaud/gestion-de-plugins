@@ -18,6 +18,7 @@
                 ">
                     {{ $license->status }}
                 </span>
+                <a href="{{ route('admin.licenses.edit', $license) }}" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Modifier</a>
                 @if($license->status === 'active')
                     <form action="{{ route('admin.licenses.revoke', $license) }}" method="POST" onsubmit="return confirm('Revoquer cette licence ?')">
                         @csrf
