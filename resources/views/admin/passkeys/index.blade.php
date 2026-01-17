@@ -95,22 +95,50 @@
         </div>
     </div>
 
-    <!-- Laragear Webpass - Gestion automatique de l'encodage WebAuthn -->
-    <script src="https://cdn.jsdelivr.net/npm/@laragear/webpass@2/dist/webpass.js" defer></script>
-
-    <script defer>
+    <script>
         document.addEventListener('DOMContentLoaded', () => {
             const registerButton = document.getElementById('register-passkey');
             const passkeyNameInput = document.getElementById('passkey-name');
             const errorDiv = document.getElementById('passkey-error');
             const successDiv = document.getElementById('passkey-success');
+            const csrfToken = '{{ csrf_token() }}';
 
             // Verifier le support WebAuthn
-            if (typeof Webpass !== 'undefined' && Webpass.isUnsupported()) {
-                errorDiv.querySelector('p').textContent = 'Votre navigateur ne supporte pas les Passkeys.';
-                errorDiv.classList.remove('hidden');
+            if (!window.PublicKeyCredential) {
+                showError('Votre navigateur ne supporte pas les Passkeys.');
                 registerButton.disabled = true;
                 return;
+            }
+
+            // Helpers pour encoder/decoder base64url
+            function base64urlToBuffer(base64url) {
+                const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+                const padding = '='.repeat((4 - base64.length % 4) % 4);
+                const binary = atob(base64 + padding);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                    bytes[i] = binary.charCodeAt(i);
+                }
+                return bytes.buffer;
+            }
+
+            function bufferToBase64url(buffer) {
+                const bytes = new Uint8Array(buffer);
+                let binary = '';
+                for (let i = 0; i < bytes.length; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+            }
+
+            function showError(message) {
+                errorDiv.querySelector('p').textContent = message;
+                errorDiv.classList.remove('hidden');
+            }
+
+            function showSuccess(message) {
+                successDiv.querySelector('p').textContent = message;
+                successDiv.classList.remove('hidden');
             }
 
             registerButton.addEventListener('click', async () => {
@@ -120,32 +148,87 @@
                 registerButton.textContent = 'En attente...';
 
                 try {
-                    // Utiliser Webpass pour l'attestation (enregistrement)
-                    const result = await Webpass.attest(
-                        '{{ route('admin.passkeys.register-options') }}',
-                        '{{ route('admin.passkeys.register') }}',
-                        {
-                            // Headers personnalises
-                            headers: {
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'Accept': 'application/json',
-                            },
-                            // Options fetch pour envoyer les cookies de session
-                            credentials: 'same-origin',
-                            // Donnees supplementaires a envoyer avec l'enregistrement
-                            body: {
-                                name: passkeyNameInput.value || 'Cle de securite',
-                            },
-                        }
-                    );
+                    // 1. Recuperer les options d'enregistrement
+                    const optionsResponse = await fetch('{{ route('admin.passkeys.register-options') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                        credentials: 'same-origin',
+                    });
+
+                    if (!optionsResponse.ok) {
+                        const errorText = await optionsResponse.text();
+                        throw new Error(`Erreur serveur (${optionsResponse.status}): ${errorText}`);
+                    }
+
+                    const options = await optionsResponse.json();
+
+                    // 2. Convertir les options pour l'API WebAuthn
+                    const publicKeyOptions = {
+                        challenge: base64urlToBuffer(options.challenge),
+                        rp: options.rp,
+                        user: {
+                            id: base64urlToBuffer(options.user.id),
+                            name: options.user.name,
+                            displayName: options.user.displayName,
+                        },
+                        pubKeyCredParams: options.pubKeyCredParams,
+                        timeout: options.timeout,
+                        attestation: options.attestation || 'none',
+                        authenticatorSelection: options.authenticatorSelection,
+                        excludeCredentials: (options.excludeCredentials || []).map(cred => ({
+                            id: base64urlToBuffer(cred.id),
+                            type: cred.type,
+                            transports: cred.transports,
+                        })),
+                    };
+
+                    // 3. Creer le credential via l'API WebAuthn du navigateur
+                    const credential = await navigator.credentials.create({
+                        publicKey: publicKeyOptions,
+                    });
+
+                    // 4. Encoder la reponse pour l'envoyer au serveur
+                    const attestationResponse = {
+                        id: credential.id,
+                        rawId: bufferToBase64url(credential.rawId),
+                        type: credential.type,
+                        response: {
+                            clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
+                            attestationObject: bufferToBase64url(credential.response.attestationObject),
+                        },
+                        name: passkeyNameInput.value || 'Cle de securite',
+                    };
+
+                    // 5. Envoyer au serveur pour enregistrement
+                    const registerResponse = await fetch('{{ route('admin.passkeys.register') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify(attestationResponse),
+                    });
+
+                    if (!registerResponse.ok) {
+                        const errorText = await registerResponse.text();
+                        throw new Error(`Erreur serveur (${registerResponse.status}): ${errorText}`);
+                    }
+
+                    const result = await registerResponse.json();
 
                     if (result.success) {
-                        successDiv.querySelector('p').textContent = result.data?.message || 'Passkey enregistree avec succes.';
-                        successDiv.classList.remove('hidden');
+                        showSuccess(result.message || 'Passkey enregistree avec succes.');
                         setTimeout(() => window.location.reload(), 1500);
                     } else {
-                        throw new Error(result.error?.message || result.error || 'Erreur inconnue');
+                        throw new Error(result.message || 'Erreur inconnue');
                     }
+
                 } catch (error) {
                     console.error('WebAuthn error:', error);
                     let message = 'Une erreur est survenue';
@@ -160,8 +243,7 @@
                         message = error.message;
                     }
 
-                    errorDiv.querySelector('p').textContent = message;
-                    errorDiv.classList.remove('hidden');
+                    showError(message);
                 } finally {
                     registerButton.disabled = false;
                     registerButton.textContent = 'Ajouter une cle de securite';
