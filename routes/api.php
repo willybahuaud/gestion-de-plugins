@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\LicenseController;
 use App\Http\Controllers\Api\StripeController;
 use App\Http\Controllers\Api\StripeWebhookController;
+use App\Http\Controllers\Api\UpdateController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -20,6 +22,19 @@ Route::post('/auth/check-email', [AuthController::class, 'checkEmail']);
 
 // Webhook Stripe (signature vérifiée dans le controller)
 Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle']);
+
+// Routes licences (appelées par les plugins WordPress installés - pas d'auth requise)
+Route::prefix('license')->group(function () {
+    Route::post('/verify', [LicenseController::class, 'verify']);
+    Route::post('/activate', [LicenseController::class, 'activate']);
+    Route::post('/deactivate', [LicenseController::class, 'deactivate']);
+});
+
+// Routes mises à jour (appelées par les plugins WordPress installés)
+Route::prefix('update')->group(function () {
+    Route::post('/check', [UpdateController::class, 'checkUpdate']);
+    Route::get('/download', [UpdateController::class, 'download'])->name('api.update.download');
+});
 
 // Routes authentifiées par API Token (pour les sites de vente WordPress)
 Route::middleware('api.token')->group(function () {
@@ -47,5 +62,11 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/subscriptions', [StripeController::class, 'getSubscription']);
         Route::post('/cancel', [StripeController::class, 'cancelSubscription']);
         Route::post('/reactivate', [StripeController::class, 'reactivateSubscription']);
+    });
+
+    // Licences - Gestion par l'utilisateur connecté
+    Route::prefix('licenses')->group(function () {
+        Route::get('/activations', [LicenseController::class, 'getActivations']);
+        Route::delete('/activations/{activationId}', [LicenseController::class, 'deactivateById']);
     });
 });
