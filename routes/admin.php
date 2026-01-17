@@ -33,7 +33,8 @@ Route::middleware('guest:admin')->group(function () {
 });
 
 // Routes protégées
-Route::middleware('admin')->group(function () {
+// guard:admin définit le guard par défaut pour que $request->user() fonctionne
+Route::middleware(['admin', 'guard:admin'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('admin.logout');
 
     // Dashboard

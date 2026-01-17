@@ -27,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.token' => \App\Http\Middleware\ApiTokenAuth::class,
             'admin' => \App\Http\Middleware\AdminAuth::class,
             'hmac' => \App\Http\Middleware\VerifyHmacSignature::class,
+            'guard' => \App\Http\Middleware\SetDefaultGuard::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
