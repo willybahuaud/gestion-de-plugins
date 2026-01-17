@@ -8,6 +8,7 @@ use App\Models\Price;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class LicenseApiTest extends TestCase
@@ -23,14 +24,32 @@ class LicenseApiTest extends TestCase
     {
         parent::setUp();
 
-        $this->product = Product::factory()->create(['slug' => 'test-plugin']);
-        $this->price = Price::factory()->create([
-            'product_id' => $this->product->id,
-            'max_activations' => 3,
+        // Désactiver le rate limiting pour les tests
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
+
+        // Créer les données manuellement pour éviter les problèmes de factory
+        $this->product = Product::create([
+            'slug' => 'test-plugin',
+            'name' => 'Test Plugin',
+            'description' => 'A test plugin',
+            'is_active' => true,
         ]);
+
+        $this->price = Price::create([
+            'product_id' => $this->product->id,
+            'stripe_price_id' => 'price_test123',
+            'name' => 'Licence Solo',
+            'type' => 'one_time',
+            'amount' => 4900,
+            'currency' => 'eur',
+            'max_activations' => 3,
+            'is_active' => true,
+        ]);
+
         $this->user = User::factory()->create();
-        $this->license = License::factory()->create([
-            'license_key' => 'test-license-key-uuid',
+
+        $this->license = License::create([
+            'license_key' => Str::uuid()->toString(),
             'user_id' => $this->user->id,
             'product_id' => $this->product->id,
             'price_id' => $this->price->id,
@@ -58,7 +77,11 @@ class LicenseApiTest extends TestCase
 
     public function test_verify_returns_error_for_wrong_product(): void
     {
-        $otherProduct = Product::factory()->create(['slug' => 'other-plugin']);
+        $otherProduct = Product::create([
+            'slug' => 'other-plugin',
+            'name' => 'Other Plugin',
+            'is_active' => true,
+        ]);
 
         $response = $this->postJson('/api/license/verify', [
             'license_key' => $this->license->license_key,
