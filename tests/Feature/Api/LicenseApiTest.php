@@ -104,11 +104,26 @@ class LicenseApiTest extends TestCase
             'expires_at' => now()->subDays(10),
         ]);
 
+        // Debug: vérifier les données
+        $this->license->refresh();
+        $debugInfo = sprintf(
+            "License product_id: %d, Product id: %d, Product slug: %s",
+            $this->license->product_id,
+            $this->product->id,
+            $this->product->slug
+        );
+
         $response = $this->postJson('/api/license/verify', [
             'license_key' => $this->license->license_key,
             'product_slug' => $this->product->slug,
             'domain' => 'example.com',
         ]);
+
+        $this->assertEquals(
+            $this->product->id,
+            $this->license->product_id,
+            "Product ID mismatch: " . $debugInfo . " | Response: " . $response->getContent()
+        );
 
         $response->assertOk()
             ->assertJson([
