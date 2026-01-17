@@ -36,6 +36,25 @@ class DashboardController extends Controller
             ->take(10)
             ->get();
 
-        return view('admin.dashboard', compact('stats', 'recentLicenses', 'recentUsers'));
+        // Alertes
+        $alerts = [
+            // Licences suspendues (paiement échoué)
+            'suspended_licenses' => License::with(['user', 'product'])
+                ->where('status', 'suspended')
+                ->orderByDesc('updated_at')
+                ->take(5)
+                ->get(),
+
+            // Licences expirant dans les 7 jours
+            'expiring_soon' => License::with(['user', 'product'])
+                ->where('status', 'active')
+                ->whereNotNull('expires_at')
+                ->whereBetween('expires_at', [now(), now()->addDays(7)])
+                ->orderBy('expires_at')
+                ->take(10)
+                ->get(),
+        ];
+
+        return view('admin.dashboard', compact('stats', 'recentLicenses', 'recentUsers', 'alerts'));
     }
 }
