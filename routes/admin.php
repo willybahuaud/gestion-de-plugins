@@ -42,6 +42,9 @@ Route::middleware('guest:admin')->group(function () {
 Route::middleware(['admin', 'guard:admin'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('admin.logout');
 
+    // Ping pour vérifier la session (heartbeat)
+    Route::get('/ping', fn () => response()->json(['ok' => true]))->name('admin.ping');
+
     // Dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('admin.dashboard');
 
