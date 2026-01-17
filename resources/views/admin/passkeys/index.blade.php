@@ -95,106 +95,75 @@
         </div>
     </div>
 
-    <script>
-        const registerButton = document.getElementById('register-passkey');
-        const passkeyNameInput = document.getElementById('passkey-name');
-        const errorDiv = document.getElementById('passkey-error');
-        const successDiv = document.getElementById('passkey-success');
+    <!-- Laragear Webpass - Gestion automatique de l'encodage WebAuthn -->
+    <script src="https://cdn.jsdelivr.net/npm/@laragear/webpass@2/dist/webpass.js" defer></script>
 
-        registerButton.addEventListener('click', async () => {
-            errorDiv.classList.add('hidden');
-            successDiv.classList.add('hidden');
-            registerButton.disabled = true;
-            registerButton.textContent = 'En attente...';
+    <script defer>
+        document.addEventListener('DOMContentLoaded', () => {
+            const registerButton = document.getElementById('register-passkey');
+            const passkeyNameInput = document.getElementById('passkey-name');
+            const errorDiv = document.getElementById('passkey-error');
+            const successDiv = document.getElementById('passkey-success');
 
-            try {
-                // Get registration options from server
-                const optionsResponse = await fetch('{{ route('admin.passkeys.register-options') }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json',
-                    },
-                });
-
-                if (!optionsResponse.ok) {
-                    throw new Error('Erreur lors de la recuperation des options');
-                }
-
-                const options = await optionsResponse.json();
-
-                // Convert base64url to ArrayBuffer
-                options.challenge = base64urlToBuffer(options.challenge);
-                options.user.id = base64urlToBuffer(options.user.id);
-                if (options.excludeCredentials) {
-                    options.excludeCredentials = options.excludeCredentials.map(cred => ({
-                        ...cred,
-                        id: base64urlToBuffer(cred.id),
-                    }));
-                }
-
-                // Create credential
-                const credential = await navigator.credentials.create({ publicKey: options });
-
-                // Send credential to server
-                const registerResponse = await fetch('{{ route('admin.passkeys.register') }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        id: credential.id,
-                        rawId: bufferToBase64url(credential.rawId),
-                        type: credential.type,
-                        response: {
-                            clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
-                            attestationObject: bufferToBase64url(credential.response.attestationObject),
-                        },
-                        name: passkeyNameInput.value || 'Cle de securite',
-                    }),
-                });
-
-                const result = await registerResponse.json();
-
-                if (result.success) {
-                    successDiv.querySelector('p').textContent = result.message;
-                    successDiv.classList.remove('hidden');
-                    setTimeout(() => window.location.reload(), 1500);
-                } else {
-                    throw new Error(result.error || 'Erreur inconnue');
-                }
-            } catch (error) {
-                console.error('WebAuthn error:', error);
-                errorDiv.querySelector('p').textContent = error.message || 'Une erreur est survenue';
+            // Verifier le support WebAuthn
+            if (typeof Webpass !== 'undefined' && Webpass.isUnsupported()) {
+                errorDiv.querySelector('p').textContent = 'Votre navigateur ne supporte pas les Passkeys.';
                 errorDiv.classList.remove('hidden');
-            } finally {
-                registerButton.disabled = false;
-                registerButton.textContent = 'Ajouter une cle de securite';
+                registerButton.disabled = true;
+                return;
             }
+
+            registerButton.addEventListener('click', async () => {
+                errorDiv.classList.add('hidden');
+                successDiv.classList.add('hidden');
+                registerButton.disabled = true;
+                registerButton.textContent = 'En attente...';
+
+                try {
+                    // Utiliser Webpass pour l'attestation (enregistrement)
+                    const result = await Webpass.attest(
+                        '{{ route('admin.passkeys.register-options') }}',
+                        '{{ route('admin.passkeys.register') }}',
+                        {
+                            // Headers personnalises
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            },
+                            // Donnees supplementaires a envoyer avec l'enregistrement
+                            body: {
+                                name: passkeyNameInput.value || 'Cle de securite',
+                            },
+                        }
+                    );
+
+                    if (result.success) {
+                        successDiv.querySelector('p').textContent = result.data?.message || 'Passkey enregistree avec succes.';
+                        successDiv.classList.remove('hidden');
+                        setTimeout(() => window.location.reload(), 1500);
+                    } else {
+                        throw new Error(result.error?.message || result.error || 'Erreur inconnue');
+                    }
+                } catch (error) {
+                    console.error('WebAuthn error:', error);
+                    let message = 'Une erreur est survenue';
+
+                    if (error.name === 'NotAllowedError') {
+                        message = 'Operation annulee ou refusee par l\'utilisateur.';
+                    } else if (error.name === 'InvalidStateError') {
+                        message = 'Cette cle de securite est deja enregistree.';
+                    } else if (error.name === 'NotSupportedError') {
+                        message = 'Votre navigateur ne supporte pas ce type d\'authentification.';
+                    } else if (error.message) {
+                        message = error.message;
+                    }
+
+                    errorDiv.querySelector('p').textContent = message;
+                    errorDiv.classList.remove('hidden');
+                } finally {
+                    registerButton.disabled = false;
+                    registerButton.textContent = 'Ajouter une cle de securite';
+                }
+            });
         });
-
-        // Helper functions
-        function base64urlToBuffer(base64url) {
-            const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
-            const padding = '='.repeat((4 - base64.length % 4) % 4);
-            const binary = atob(base64 + padding);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) {
-                bytes[i] = binary.charCodeAt(i);
-            }
-            return bytes.buffer;
-        }
-
-        function bufferToBase64url(buffer) {
-            const bytes = new Uint8Array(buffer);
-            let binary = '';
-            for (let i = 0; i < bytes.length; i++) {
-                binary += String.fromCharCode(bytes[i]);
-            }
-            return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-        }
     </script>
 </x-admin-layout>

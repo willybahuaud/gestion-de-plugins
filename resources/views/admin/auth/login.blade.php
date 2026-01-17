@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connexion Admin - Plugin Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@laragear/webpass@2/dist/webpass.js" defer></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center">
     <div class="max-w-md w-full bg-white rounded-lg shadow-md p-8">
@@ -61,116 +62,73 @@
         </form>
     </div>
 
-    <script>
-        const loginPasskeyButton = document.getElementById('login-passkey');
-        const emailInput = document.getElementById('email');
-        const passwordInput = document.getElementById('password');
-        const errorDiv = document.getElementById('passkey-error');
+    <script defer>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginPasskeyButton = document.getElementById('login-passkey');
+            const emailInput = document.getElementById('email');
+            const errorDiv = document.getElementById('passkey-error');
+            const passkeyButtonHtml = loginPasskeyButton.innerHTML;
 
-        loginPasskeyButton.addEventListener('click', async () => {
-            const email = emailInput.value;
-            if (!email) {
-                showError('Veuillez entrer votre email');
-                return;
-            }
-
-            errorDiv.classList.add('hidden');
-            loginPasskeyButton.disabled = true;
-            loginPasskeyButton.textContent = 'En attente de la cle...';
-
-            try {
-                // Get assertion options
-                const optionsResponse = await fetch('{{ route('admin.passkey.login-options') }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json',
-                    },
-                    body: JSON.stringify({ email }),
-                });
-
-                if (!optionsResponse.ok) {
-                    const error = await optionsResponse.json();
-                    throw new Error(error.error || 'Aucune passkey trouvee');
+            loginPasskeyButton.addEventListener('click', async () => {
+                const email = emailInput.value;
+                if (!email) {
+                    showError('Veuillez entrer votre email');
+                    return;
                 }
 
-                const options = await optionsResponse.json();
+                errorDiv.classList.add('hidden');
+                loginPasskeyButton.disabled = true;
+                loginPasskeyButton.textContent = 'En attente de la cle...';
 
-                // Convert base64url to ArrayBuffer
-                options.challenge = base64urlToBuffer(options.challenge);
-                if (options.allowCredentials) {
-                    options.allowCredentials = options.allowCredentials.map(cred => ({
-                        ...cred,
-                        id: base64urlToBuffer(cred.id),
-                    }));
+                try {
+                    // Utiliser Webpass pour l'assertion (authentification)
+                    const result = await Webpass.assert(
+                        '{{ route('admin.passkey.login-options') }}',
+                        '{{ route('admin.passkey.login') }}',
+                        {
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            },
+                            // Envoyer l'email pour les options
+                            optionsBody: {
+                                email: email,
+                            },
+                            // Envoyer remember avec l'assertion
+                            body: {
+                                remember: document.getElementById('remember').checked,
+                            },
+                        }
+                    );
+
+                    if (result.success && result.data?.redirect) {
+                        window.location.href = result.data.redirect;
+                    } else if (result.success) {
+                        window.location.href = '{{ route('admin.dashboard') }}';
+                    } else {
+                        throw new Error(result.error?.message || result.error || 'Authentification echouee');
+                    }
+                } catch (error) {
+                    console.error('WebAuthn error:', error);
+                    let message = 'Une erreur est survenue';
+
+                    if (error.name === 'NotAllowedError') {
+                        message = 'Operation annulee ou refusee par l\'utilisateur.';
+                    } else if (error.message) {
+                        message = error.message;
+                    }
+
+                    showError(message);
+                } finally {
+                    loginPasskeyButton.disabled = false;
+                    loginPasskeyButton.innerHTML = passkeyButtonHtml;
                 }
+            });
 
-                // Get credential
-                const credential = await navigator.credentials.get({ publicKey: options });
-
-                // Send to server
-                const loginResponse = await fetch('{{ route('admin.passkey.login') }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        id: credential.id,
-                        rawId: bufferToBase64url(credential.rawId),
-                        type: credential.type,
-                        response: {
-                            clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
-                            authenticatorData: bufferToBase64url(credential.response.authenticatorData),
-                            signature: bufferToBase64url(credential.response.signature),
-                            userHandle: credential.response.userHandle ? bufferToBase64url(credential.response.userHandle) : null,
-                        },
-                        remember: document.getElementById('remember').checked,
-                    }),
-                });
-
-                const result = await loginResponse.json();
-
-                if (result.success) {
-                    window.location.href = result.redirect;
-                } else {
-                    throw new Error(result.error || 'Authentification echouee');
-                }
-            } catch (error) {
-                console.error('WebAuthn error:', error);
-                showError(error.message || 'Une erreur est survenue');
-            } finally {
-                loginPasskeyButton.disabled = false;
-                loginPasskeyButton.innerHTML = '<svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>Connexion avec Passkey';
+            function showError(message) {
+                errorDiv.querySelector('p').textContent = message;
+                errorDiv.classList.remove('hidden');
             }
         });
-
-        function showError(message) {
-            errorDiv.querySelector('p').textContent = message;
-            errorDiv.classList.remove('hidden');
-        }
-
-        function base64urlToBuffer(base64url) {
-            const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
-            const padding = '='.repeat((4 - base64.length % 4) % 4);
-            const binary = atob(base64 + padding);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) {
-                bytes[i] = binary.charCodeAt(i);
-            }
-            return bytes.buffer;
-        }
-
-        function bufferToBase64url(buffer) {
-            const bytes = new Uint8Array(buffer);
-            let binary = '';
-            for (let i = 0; i < bytes.length; i++) {
-                binary += String.fromCharCode(bytes[i]);
-            }
-            return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-        }
     </script>
 </body>
 </html>
