@@ -73,15 +73,16 @@
     </div>
 
     <div class="bg-white rounded-lg shadow">
-        <div class="px-6 py-4 border-b border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
             <h2 class="text-lg font-semibold text-gray-900">Dernieres factures</h2>
+            <a href="{{ route('admin.invoices.index', ['user_id' => $user->id]) }}" class="text-sm text-indigo-600 hover:underline">Voir tout</a>
         </div>
         <div class="divide-y divide-gray-200">
             @forelse($user->invoices as $invoice)
                 <div class="px-6 py-4">
                     <div class="flex justify-between items-center">
                         <div>
-                            <p class="font-medium">{{ $invoice->number }}</p>
+                            <a href="{{ route('admin.invoices.show', $invoice) }}" class="font-medium text-indigo-600 hover:underline">{{ $invoice->number }}</a>
                             <p class="text-sm text-gray-500">{{ $invoice->issued_at?->format('d/m/Y') }}</p>
                         </div>
                         <div class="text-right">

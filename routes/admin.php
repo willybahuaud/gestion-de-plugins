@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ApiTokenController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\InvoiceController;
 use App\Http\Controllers\Admin\LicenseController;
 use App\Http\Controllers\Admin\PasskeyController;
 use App\Http\Controllers\Admin\PriceController;
@@ -76,6 +77,11 @@ Route::middleware(['admin', 'guard:admin'])->group(function () {
 
     // API Tokens
     Route::resource('api-tokens', ApiTokenController::class)->names('admin.api-tokens')->only(['index', 'create', 'store', 'destroy']);
+
+    // Invoices (factures)
+    Route::get('invoices', [InvoiceController::class, 'index'])->name('admin.invoices.index');
+    Route::get('invoices/export', [InvoiceController::class, 'export'])->name('admin.invoices.export');
+    Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('admin.invoices.show');
 
     // Audit logs
     Route::get('audit-logs', [AuditLogController::class, 'index'])->name('admin.audit-logs.index');

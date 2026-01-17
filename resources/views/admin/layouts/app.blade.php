@@ -19,6 +19,7 @@
                         <a href="{{ route('admin.products.index') }}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500 {{ request()->routeIs('admin.products.*') ? 'bg-indigo-700' : '' }}">Produits</a>
                         <a href="{{ route('admin.users.index') }}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500 {{ request()->routeIs('admin.users.*') ? 'bg-indigo-700' : '' }}">Clients</a>
                         <a href="{{ route('admin.licenses.index') }}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500 {{ request()->routeIs('admin.licenses.*') ? 'bg-indigo-700' : '' }}">Licences</a>
+                        <a href="{{ route('admin.invoices.index') }}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500 {{ request()->routeIs('admin.invoices.*') ? 'bg-indigo-700' : '' }}">Factures</a>
                         <a href="{{ route('admin.api-tokens.index') }}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500 {{ request()->routeIs('admin.api-tokens.*') ? 'bg-indigo-700' : '' }}">API Tokens</a>
                         <a href="{{ route('admin.audit-logs.index') }}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500 {{ request()->routeIs('admin.audit-logs.*') ? 'bg-indigo-700' : '' }}">Audit</a>
                     </div>
