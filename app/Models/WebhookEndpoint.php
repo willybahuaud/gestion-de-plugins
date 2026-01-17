@@ -25,6 +25,7 @@ class WebhookEndpoint extends Model
             'events' => 'array',
             'product_ids' => 'array',
             'is_active' => 'boolean',
+            'secret' => 'encrypted',
         ];
     }
 
