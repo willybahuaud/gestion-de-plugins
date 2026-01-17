@@ -7,13 +7,13 @@ use App\Models\License;
 use App\Models\Price;
 use App\Models\Product;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class LicenseApiTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseMigrations;
 
     private Product $product;
     private Price $price;
