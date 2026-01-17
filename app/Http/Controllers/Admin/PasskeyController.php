@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
+use Illuminate\Contracts\Support\Responsable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use Laragear\WebAuthn\Http\Requests\AssertedRequest;
@@ -55,20 +55,16 @@ class PasskeyController extends Controller
     /**
      * Get assertion options to authenticate with passkey.
      */
-    public function loginOptions(AssertionRequest $request): JsonResponse
+    public function loginOptions(AssertionRequest $request): Responsable
     {
         $email = $request->input('email');
         $admin = AdminUser::where('email', $email)->first();
 
         if (! $admin || $admin->webAuthnCredentials()->count() === 0) {
-            return response()->json([
-                'error' => 'Aucune passkey configuree pour ce compte.',
-            ], 404);
+            abort(404, 'Aucune passkey configuree pour ce compte.');
         }
 
-        return response()->json(
-            $request->toVerify($admin)
-        );
+        return $request->toVerify($admin);
     }
 
     /**
@@ -76,9 +72,9 @@ class PasskeyController extends Controller
      */
     public function login(AssertedRequest $request): JsonResponse
     {
-        $admin = $request->login('admin', remember: $request->boolean('remember'));
+        $success = $request->login('admin', remember: $request->boolean('remember'));
 
-        if (! $admin) {
+        if (! $success) {
             return response()->json([
                 'error' => 'Authentification echouee.',
             ], 401);
