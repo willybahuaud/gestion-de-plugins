@@ -44,16 +44,11 @@ class PasskeyController extends Controller
         $alias = $request->input('name', 'Ma cle de securite');
 
         // save() utilise $request->user() automatiquement grâce au middleware guard:admin
-        $credential = $request->save(['alias' => $alias]);
+        $request->save(['alias' => $alias]);
 
         return response()->json([
             'success' => true,
             'message' => 'Passkey enregistree avec succes.',
-            'credential' => [
-                'id' => $credential->id,
-                'alias' => $credential->alias,
-                'created_at' => $credential->created_at->format('d/m/Y H:i'),
-            ],
         ]);
     }
 
@@ -100,7 +95,7 @@ class PasskeyController extends Controller
     /**
      * Delete a passkey.
      */
-    public function destroy(int $id): RedirectResponse
+    public function destroy(string $id): RedirectResponse
     {
         $admin = Auth::guard('admin')->user();
         $credential = $admin->webAuthnCredentials()->findOrFail($id);
