@@ -6,12 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\Activation;
 use App\Models\License;
 use App\Models\Product;
+use App\Services\WebhookService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class LicenseController extends Controller
 {
+    public function __construct(
+        private WebhookService $webhookService
+    ) {}
     /**
      * Vérifier la validité d'une licence
      * Appelé par les plugins WordPress installés
@@ -229,6 +233,9 @@ class LicenseController extends Controller
             'last_check_at' => now(),
         ]);
 
+        // Déclencher le webhook d'activation
+        $this->webhookService->licenseActivated($license, $normalizedDomain);
+
         return response()->json([
             'success' => true,
             'message' => 'Licence activée avec succès',
@@ -286,6 +293,9 @@ class LicenseController extends Controller
             'is_active' => false,
             'deactivated_at' => now(),
         ]);
+
+        // Déclencher le webhook de désactivation
+        $this->webhookService->licenseDeactivated($license, $normalizedDomain);
 
         return response()->json([
             'success' => true,

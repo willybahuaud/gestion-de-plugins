@@ -8,6 +8,7 @@ use App\Models\License;
 use App\Models\Price;
 use App\Models\User;
 use App\Services\StripeService;
+use App\Services\WebhookService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
@@ -18,7 +19,8 @@ use Stripe\Webhook;
 class StripeWebhookController extends Controller
 {
     public function __construct(
-        private StripeService $stripeService
+        private StripeService $stripeService,
+        private WebhookService $webhookService
     ) {}
 
     public function handle(Request $request): Response
@@ -158,6 +160,9 @@ class StripeWebhookController extends Controller
             'status' => 'expired',
         ]);
 
+        // Déclencher le webhook d'expiration
+        $this->webhookService->licenseExpired($license);
+
         return response('Subscription deleted', 200);
     }
 
@@ -200,6 +205,18 @@ class StripeWebhookController extends Controller
                 'status' => 'active',
                 'expires_at' => \Carbon\Carbon::createFromTimestamp($subscription->current_period_end),
             ]);
+
+            // Déclencher le webhook de renouvellement
+            $this->webhookService->licenseRenewed($license);
+        }
+
+        // Déclencher le webhook de paiement réussi
+        if ($license) {
+            $this->webhookService->paymentCompleted($license, [
+                'invoice_id' => $invoice->id,
+                'amount' => $invoice->total,
+                'currency' => $invoice->currency,
+            ]);
         }
 
         return response('Invoice processed', 200);
@@ -218,6 +235,13 @@ class StripeWebhookController extends Controller
 
         if ($license) {
             $license->update(['status' => 'suspended']);
+
+            // Déclencher le webhook d'échec de paiement
+            $this->webhookService->paymentFailed($license, [
+                'invoice_id' => $invoice->id,
+                'amount' => $invoice->amount_due ?? 0,
+                'currency' => $invoice->currency,
+            ]);
         }
 
         return response('Payment failure processed', 200);
@@ -232,7 +256,7 @@ class StripeWebhookController extends Controller
             $expiresAt = \Carbon\Carbon::createFromTimestamp($subscription->current_period_end);
         }
 
-        return License::create([
+        $license = License::create([
             'uuid' => Str::uuid()->toString(),
             'user_id' => $user->id,
             'product_id' => $price->product_id,
@@ -243,5 +267,10 @@ class StripeWebhookController extends Controller
             'activations_limit' => $price->activations_limit ?? 1,
             'expires_at' => $expiresAt,
         ]);
+
+        // Déclencher le webhook sortant
+        $this->webhookService->licenseCreated($license);
+
+        return $license;
     }
 }
