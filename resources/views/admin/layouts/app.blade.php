@@ -162,26 +162,22 @@
             return response;
         };
 
-        // Heartbeat : vérifier la session toutes les 30 secondes
-        let heartbeatInterval = null;
-        function startHeartbeat() {
-            if (heartbeatInterval) return;
-            heartbeatInterval = setInterval(async () => {
-                try {
-                    const response = await originalFetch('{{ route('admin.ping') }}', {
-                        credentials: 'same-origin',
-                    });
-                    if (response.status === 401) {
-                        clearInterval(heartbeatInterval);
-                        heartbeatInterval = null;
-                        showModal();
-                    }
-                } catch (e) {
-                    // Erreur réseau, on ignore
-                }
-            }, 30000);
+        // Inactivité : affiche la modal après SESSION_LIFETIME minutes sans interaction
+        const sessionLifetime = {{ config('session.lifetime', 30) }} * 60 * 1000; // en ms
+        let inactivityTimer = null;
+
+        function resetInactivityTimer() {
+            if (inactivityTimer) clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                showModal();
+            }, sessionLifetime);
         }
-        startHeartbeat();
+
+        // Reset le timer sur toute interaction
+        ['click', 'keydown', 'scroll', 'mousemove'].forEach(event => {
+            document.addEventListener(event, resetInactivityTimer, { passive: true });
+        });
+        resetInactivityTimer();
 
         // Reconnexion avec passkey
         btnReconnect.addEventListener('click', async () => {
