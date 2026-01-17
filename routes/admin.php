@@ -82,6 +82,7 @@ Route::middleware(['admin', 'guard:admin'])->group(function () {
     Route::get('invoices', [InvoiceController::class, 'index'])->name('admin.invoices.index');
     Route::get('invoices/export', [InvoiceController::class, 'export'])->name('admin.invoices.export');
     Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('admin.invoices.show');
+    Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'downloadPdf'])->name('admin.invoices.pdf');
 
     // Audit logs
     Route::get('audit-logs', [AuditLogController::class, 'index'])->name('admin.audit-logs.index');

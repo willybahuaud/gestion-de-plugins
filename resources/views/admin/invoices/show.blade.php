@@ -18,9 +18,13 @@
                 ">
                     {{ $invoice->status }}
                 </span>
-                @if($invoice->stripe_pdf_url)
-                    <a href="{{ $invoice->stripe_pdf_url }}" target="_blank" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
+                @if($invoice->local_pdf_path)
+                    <a href="{{ route('admin.invoices.pdf', $invoice) }}" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
                         Telecharger PDF
+                    </a>
+                @elseif($invoice->stripe_pdf_url)
+                    <a href="{{ $invoice->stripe_pdf_url }}" target="_blank" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">
+                        PDF Stripe
                     </a>
                 @endif
             </div>

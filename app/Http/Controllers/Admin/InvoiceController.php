@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class InvoiceController extends Controller
@@ -123,5 +124,24 @@ class InvoiceController extends Controller
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
+    }
+
+    public function downloadPdf(Invoice $invoice)
+    {
+        if (!$invoice->local_pdf_path) {
+            return back()->with('error', 'PDF non disponible localement.');
+        }
+
+        $disk = config('app.env') === 'production' ? 'b2' : 'local';
+
+        if (!Storage::disk($disk)->exists($invoice->local_pdf_path)) {
+            return back()->with('error', 'Fichier PDF introuvable.');
+        }
+
+        return Storage::disk($disk)->download(
+            $invoice->local_pdf_path,
+            $invoice->number . '.pdf',
+            ['Content-Type' => 'application/pdf']
+        );
     }
 }

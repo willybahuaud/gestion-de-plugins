@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\DownloadInvoicePdf;
 use App\Models\Invoice;
 use App\Models\License;
 use App\Models\Price;
@@ -59,6 +60,7 @@ class StripeWebhookController extends Controller
             'customer.subscription.updated' => $this->handleSubscriptionUpdated($event),
             'customer.subscription.deleted' => $this->handleSubscriptionDeleted($event),
             'invoice.paid' => $this->handleInvoicePaid($event),
+            'invoice.finalized' => $this->handleInvoiceFinalized($event),
             'invoice.payment_failed' => $this->handleInvoicePaymentFailed($event),
             default => response('Webhook received', 200),
         };
@@ -193,7 +195,7 @@ class StripeWebhookController extends Controller
             : null;
 
         // Créer l'enregistrement de facture
-        Invoice::updateOrCreate(
+        $invoiceModel = Invoice::updateOrCreate(
             ['stripe_invoice_id' => $invoice->id],
             [
                 'user_id' => $user->id,
@@ -207,6 +209,11 @@ class StripeWebhookController extends Controller
                 'issued_at' => \Carbon\Carbon::createFromTimestamp($invoice->created),
             ]
         );
+
+        // Télécharger le PDF si pas déjà fait
+        if ($invoice->invoice_pdf && !$invoiceModel->local_pdf_path) {
+            DownloadInvoicePdf::dispatch($invoiceModel);
+        }
 
         // Si c'est un renouvellement d'abonnement, mettre à jour la date d'expiration
         if ($license && $subscriptionId) {
@@ -230,6 +237,40 @@ class StripeWebhookController extends Controller
         }
 
         return response('Invoice processed', 200);
+    }
+
+    private function handleInvoiceFinalized(Event $event): Response
+    {
+        $invoice = $event->data->object;
+        $customerId = $invoice->customer;
+
+        $user = User::where('stripe_customer_id', $customerId)->first();
+
+        if (!$user) {
+            return response('Unknown customer', 200);
+        }
+
+        // Créer ou mettre à jour l'enregistrement de facture
+        $invoiceModel = Invoice::updateOrCreate(
+            ['stripe_invoice_id' => $invoice->id],
+            [
+                'user_id' => $user->id,
+                'number' => $invoice->number,
+                'amount_total' => $invoice->total ?? 0,
+                'amount_tax' => $invoice->tax ?? 0,
+                'currency' => $invoice->currency,
+                'status' => $invoice->status,
+                'stripe_pdf_url' => $invoice->invoice_pdf,
+                'issued_at' => \Carbon\Carbon::createFromTimestamp($invoice->created),
+            ]
+        );
+
+        // Télécharger le PDF si disponible
+        if ($invoice->invoice_pdf) {
+            DownloadInvoicePdf::dispatch($invoiceModel);
+        }
+
+        return response('Invoice finalized processed', 200);
     }
 
     private function handleInvoicePaymentFailed(Event $event): Response

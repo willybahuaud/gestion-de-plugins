@@ -84,8 +84,12 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
-                            @if($invoice->stripe_pdf_url)
-                                <a href="{{ $invoice->stripe_pdf_url }}" target="_blank" class="text-indigo-600 hover:underline">
+                            @if($invoice->local_pdf_path)
+                                <a href="{{ route('admin.invoices.pdf', $invoice) }}" class="text-indigo-600 hover:underline" title="PDF sauvegarde">
+                                    PDF
+                                </a>
+                            @elseif($invoice->stripe_pdf_url)
+                                <a href="{{ $invoice->stripe_pdf_url }}" target="_blank" class="text-gray-500 hover:underline" title="PDF Stripe">
                                     PDF
                                 </a>
                             @endif
