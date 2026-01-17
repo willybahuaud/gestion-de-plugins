@@ -52,10 +52,14 @@
             </div>
         </div>
 
-        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-gray-50 p-4 rounded">
-                <p class="text-sm text-gray-500">Activations</p>
-                <p class="font-medium">{{ $license->activations->where('is_active', true)->count() }} / {{ $license->activations_limit }}</p>
+                <p class="text-sm text-gray-500">Activations production</p>
+                <p class="font-medium">{{ $license->productionActivationsCount() }} / {{ $license->activations_limit }}</p>
+            </div>
+            <div class="bg-gray-50 p-4 rounded">
+                <p class="text-sm text-gray-500">Environnements dev</p>
+                <p class="font-medium text-gray-600">{{ $license->devActivationsCount() }} <span class="text-xs text-gray-400">(ne comptent pas)</span></p>
             </div>
             @if($license->stripe_subscription_id)
                 <div class="bg-gray-50 p-4 rounded">
@@ -71,11 +75,19 @@
             <h2 class="text-lg font-semibold text-gray-900">Activations</h2>
         </div>
         <div class="divide-y divide-gray-200">
-            @forelse($license->activations as $activation)
-                <div class="px-6 py-4">
+            @forelse($license->activations()->orderBy('is_dev_domain')->orderBy('activated_at', 'desc')->get() as $activation)
+                <div class="px-6 py-4 {{ $activation->is_dev_domain ? 'bg-gray-50' : '' }}">
                     <div class="flex justify-between items-center">
                         <div>
-                            <p class="font-medium">{{ $activation->domain }}</p>
+                            <p class="font-medium {{ $activation->is_dev_domain ? 'text-gray-500' : '' }}">
+                                {{ $activation->domain }}
+                                @if($activation->is_dev_domain)
+                                    <span class="ml-2 px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700">Dev</span>
+                                    @if($activation->production_domain)
+                                        <span class="text-xs text-gray-400">→ {{ $activation->production_domain }}</span>
+                                    @endif
+                                @endif
+                            </p>
                             <p class="text-sm text-gray-500">
                                 IP: {{ $activation->ip_address }}
                                 @if($activation->local_ip)

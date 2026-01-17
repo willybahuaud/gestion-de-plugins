@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Activation;
 use App\Models\License;
 use App\Models\Product;
+use App\Services\DevDomainDetector;
 use App\Services\DomainValidator;
 use App\Services\WebhookService;
 use Illuminate\Http\JsonResponse;
@@ -16,7 +17,8 @@ class LicenseController extends Controller
 {
     public function __construct(
         private WebhookService $webhookService,
-        private DomainValidator $domainValidator
+        private DomainValidator $domainValidator,
+        private DevDomainDetector $devDomainDetector
     ) {}
     /**
      * Vérifier la validité d'une licence
@@ -86,15 +88,41 @@ class LicenseController extends Controller
             ->where('is_active', true)
             ->first();
 
+        // Si pas d'activation directe et que c'est un domaine dev, chercher le domaine prod
+        if (!$activation && $this->devDomainDetector->isDevDomain($normalizedDomain)) {
+            $activation = $this->findProductionActivation($license, $normalizedDomain);
+
+            // Si on trouve une activation prod, créer automatiquement l'activation dev
+            if ($activation) {
+                $devActivation = Activation::create([
+                    'license_id' => $license->id,
+                    'domain' => $normalizedDomain,
+                    'is_active' => true,
+                    'is_dev_domain' => true,
+                    'production_domain' => $activation->domain,
+                    'ip_address' => $request->ip(),
+                    'activated_at' => now(),
+                    'last_check_at' => now(),
+                ]);
+                $activation = $devActivation;
+            }
+        }
+
         if (!$activation) {
+            // Vérifier si c'est un domaine dev sans activation prod
+            $isDevDomain = $this->devDomainDetector->isDevDomain($normalizedDomain);
+
             return response()->json([
                 'success' => true,
                 'valid' => false,
                 'reason' => 'domain_not_activated',
-                'message' => 'Ce domaine n\'est pas activé pour cette licence',
+                'message' => $isDevDomain
+                    ? 'Aucun domaine de production correspondant n\'est activé pour cette licence'
+                    : 'Ce domaine n\'est pas activé pour cette licence',
                 'can_activate' => $license->canActivate(),
-                'activations_count' => $license->activations()->where('is_active', true)->count(),
+                'activations_count' => $license->productionActivationsCount(),
                 'activations_limit' => $license->activations_limit,
+                'is_dev_domain' => $isDevDomain,
             ]);
         }
 
@@ -188,8 +216,24 @@ class LicenseController extends Controller
             ], 400);
         }
 
-        // Avertissement si domaine de dev en production
-        $isDev = $domainValidation['is_dev'] ?? false;
+        // Détecter si c'est un domaine de développement
+        $isDevDomain = $this->devDomainDetector->isDevDomain($normalizedDomain);
+        $productionDomain = null;
+
+        // Si c'est un domaine dev, chercher le domaine de production correspondant
+        if ($isDevDomain) {
+            $productionActivation = $this->findProductionActivation($license, $normalizedDomain);
+
+            if (!$productionActivation) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pour activer un environnement de développement, vous devez d\'abord activer le domaine de production correspondant',
+                    'is_dev_domain' => true,
+                ], 400);
+            }
+
+            $productionDomain = $productionActivation->domain;
+        }
 
         // Vérifier si déjà activé sur ce domaine
         $existingActivation = $license->activations()
@@ -205,6 +249,7 @@ class LicenseController extends Controller
                         'id' => $existingActivation->id,
                         'domain' => $existingActivation->domain,
                         'activated_at' => $existingActivation->activated_at->toIso8601String(),
+                        'is_dev_domain' => $existingActivation->is_dev_domain,
                     ],
                 ]);
             }
@@ -225,16 +270,17 @@ class LicenseController extends Controller
                     'id' => $existingActivation->id,
                     'domain' => $existingActivation->domain,
                     'activated_at' => $existingActivation->activated_at->toIso8601String(),
+                    'is_dev_domain' => $existingActivation->is_dev_domain,
                 ],
             ]);
         }
 
-        // Vérifier la limite d'activations
-        if (!$license->canActivate()) {
+        // Vérifier la limite d'activations (seulement pour les domaines de production)
+        if (!$isDevDomain && !$license->canActivate()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Limite d\'activations atteinte',
-                'activations_count' => $license->activations()->where('is_active', true)->count(),
+                'activations_count' => $license->productionActivationsCount(),
                 'activations_limit' => $license->activations_limit,
             ], 400);
         }
@@ -246,6 +292,8 @@ class LicenseController extends Controller
             'ip_address' => $request->ip(),
             'local_ip' => $request->local_ip,
             'is_active' => true,
+            'is_dev_domain' => $isDevDomain,
+            'production_domain' => $productionDomain,
             'activated_at' => now(),
             'last_check_at' => now(),
         ]);
@@ -253,15 +301,21 @@ class LicenseController extends Controller
         // Déclencher le webhook d'activation
         $this->webhookService->licenseActivated($license, $normalizedDomain);
 
+        $message = $isDevDomain
+            ? 'Environnement de développement activé (ne compte pas dans la limite)'
+            : 'Licence activée avec succès';
+
         return response()->json([
             'success' => true,
-            'message' => 'Licence activée avec succès',
+            'message' => $message,
             'activation' => [
                 'id' => $activation->id,
                 'domain' => $activation->domain,
                 'activated_at' => $activation->activated_at->toIso8601String(),
+                'is_dev_domain' => $isDevDomain,
+                'production_domain' => $productionDomain,
             ],
-            'activations_count' => $license->activations()->where('is_active', true)->count(),
+            'activations_count' => $license->productionActivationsCount(),
             'activations_limit' => $license->activations_limit,
         ], 201);
     }
@@ -317,7 +371,7 @@ class LicenseController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Licence désactivée avec succès',
-            'activations_count' => $license->activations()->where('is_active', true)->count(),
+            'activations_count' => $license->productionActivationsCount(),
             'activations_limit' => $license->activations_limit,
         ]);
     }
@@ -349,12 +403,15 @@ class LicenseController extends Controller
         }
 
         $activations = $license->activations()
+            ->orderBy('is_dev_domain')
             ->orderBy('activated_at', 'desc')
             ->get()
             ->map(fn ($a) => [
                 'id' => $a->id,
                 'domain' => $a->domain,
                 'is_active' => $a->is_active,
+                'is_dev_domain' => $a->is_dev_domain,
+                'production_domain' => $a->production_domain,
                 'activated_at' => $a->activated_at?->toIso8601String(),
                 'deactivated_at' => $a->deactivated_at?->toIso8601String(),
                 'last_check_at' => $a->last_check_at?->toIso8601String(),
@@ -363,7 +420,8 @@ class LicenseController extends Controller
         return response()->json([
             'success' => true,
             'activations' => $activations,
-            'activations_active_count' => $license->activations()->where('is_active', true)->count(),
+            'activations_production_count' => $license->productionActivationsCount(),
+            'activations_dev_count' => $license->devActivationsCount(),
             'activations_limit' => $license->activations_limit,
         ]);
     }
@@ -419,5 +477,25 @@ class LicenseController extends Controller
             'invalid_format' => 'Le format du domaine est invalide',
             default => 'Domaine invalide',
         };
+    }
+
+    /**
+     * Cherche une activation de production correspondant à un domaine de développement.
+     */
+    private function findProductionActivation(License $license, string $devDomain): ?Activation
+    {
+        // Récupérer toutes les activations de production actives
+        $productionActivations = $license->activations()
+            ->where('is_active', true)
+            ->where('is_dev_domain', false)
+            ->get();
+
+        foreach ($productionActivations as $activation) {
+            if ($this->devDomainDetector->matchesProduction($devDomain, $activation->domain)) {
+                return $activation;
+            }
+        }
+
+        return null;
     }
 }

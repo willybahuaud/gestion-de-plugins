@@ -14,6 +14,8 @@ class Activation extends Model
         'license_id',
         'domain',
         'is_active',
+        'is_dev_domain',
+        'production_domain',
         'ip_address',
         'local_ip',
         'activated_at',
@@ -26,6 +28,7 @@ class Activation extends Model
     {
         return [
             'is_active' => 'boolean',
+            'is_dev_domain' => 'boolean',
             'activated_at' => 'datetime',
             'last_check_at' => 'datetime',
             'deactivated_at' => 'datetime',

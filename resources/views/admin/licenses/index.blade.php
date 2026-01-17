@@ -36,6 +36,7 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produit</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Activations</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expire</th>
                 </tr>
             </thead>
@@ -60,13 +61,19 @@
                                 {{ $license->status }}
                             </span>
                         </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {{ $license->productionActivationsCount() }}/{{ $license->activations_limit }}
+                            @if($license->devActivationsCount() > 0)
+                                <span class="text-xs text-gray-400">(+{{ $license->devActivationsCount() }} dev)</span>
+                            @endif
+                        </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {{ $license->expires_at?->format('d/m/Y') ?? 'Jamais' }}
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-6 py-4 text-center text-gray-500">Aucune licence</td>
+                        <td colspan="7" class="px-6 py-4 text-center text-gray-500">Aucune licence</td>
                     </tr>
                 @endforelse
             </tbody>

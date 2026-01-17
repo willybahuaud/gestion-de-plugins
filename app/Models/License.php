@@ -101,12 +101,35 @@ class License extends Model
             return true; // Illimité
         }
 
-        return $this->activations()->count() < $this->max_activations;
+        // Ne compter que les activations de production
+        return $this->productionActivationsCount() < $this->max_activations;
+    }
+
+    /**
+     * Nombre d'activations de production actives (hors domaines dev).
+     */
+    public function productionActivationsCount(): int
+    {
+        return $this->activations()
+            ->where('is_active', true)
+            ->where('is_dev_domain', false)
+            ->count();
+    }
+
+    /**
+     * Nombre d'activations de développement actives.
+     */
+    public function devActivationsCount(): int
+    {
+        return $this->activations()
+            ->where('is_active', true)
+            ->where('is_dev_domain', true)
+            ->count();
     }
 
     public function getActivationsCountAttribute(): int
     {
-        return $this->activations()->count();
+        return $this->productionActivationsCount();
     }
 
     public function getRemainingActivationsAttribute(): int
@@ -115,7 +138,7 @@ class License extends Model
             return -1; // Illimité
         }
 
-        return max(0, $this->max_activations - $this->activations_count);
+        return max(0, $this->max_activations - $this->productionActivationsCount());
     }
 
     /**
