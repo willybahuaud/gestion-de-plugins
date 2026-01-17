@@ -3,11 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laragear\WebAuthn\Contracts\WebAuthnAuthenticatable;
+use Laragear\WebAuthn\WebAuthnAuthentication;
 
-class AdminUser extends Authenticatable
+class AdminUser extends Authenticatable implements WebAuthnAuthenticatable
 {
     use HasFactory;
+    use WebAuthnAuthentication;
 
     protected $fillable = [
         'email',

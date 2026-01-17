@@ -18,9 +18,15 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Global middleware for all web routes
+        $middleware->web(append: [
+            \App\Http\Middleware\SecurityHeaders::class,
+        ]);
+
         $middleware->alias([
             'api.token' => \App\Http\Middleware\ApiTokenAuth::class,
             'admin' => \App\Http\Middleware\AdminAuth::class,
+            'hmac' => \App\Http\Middleware\VerifyHmacSignature::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

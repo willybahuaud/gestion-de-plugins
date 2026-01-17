@@ -70,4 +70,36 @@
             </form>
         </div>
     </div>
+
+    <div class="mt-6 bg-white rounded-lg shadow p-6">
+        <div class="flex justify-between items-start">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">Cles de securite (Passkeys)</h2>
+                <p class="text-sm text-gray-500 mt-1">Connectez-vous sans mot de passe avec une cle de securite physique ou biometrique (compatible 1Password)</p>
+            </div>
+            <a href="{{ route('admin.passkeys.index') }}" class="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-900 flex items-center">
+                <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                </svg>
+                Gerer les passkeys
+            </a>
+        </div>
+
+        @php
+            $passkeysCount = Auth::guard('admin')->user()->webAuthnCredentials()->count();
+        @endphp
+
+        <div class="mt-4">
+            @if($passkeysCount > 0)
+                <p class="text-sm text-green-600">
+                    <svg class="inline h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    {{ $passkeysCount }} cle(s) de securite configuree(s)
+                </p>
+            @else
+                <p class="text-sm text-gray-500">Aucune cle de securite configuree</p>
+            @endif
+        </div>
+    </div>
 </x-admin-layout>

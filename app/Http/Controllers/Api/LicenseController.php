@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Activation;
 use App\Models\License;
 use App\Models\Product;
+use App\Services\DomainValidator;
 use App\Services\WebhookService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,7 +15,8 @@ use Illuminate\Support\Facades\Validator;
 class LicenseController extends Controller
 {
     public function __construct(
-        private WebhookService $webhookService
+        private WebhookService $webhookService,
+        private DomainValidator $domainValidator
     ) {}
     /**
      * Vérifier la validité d'une licence
@@ -173,6 +175,21 @@ class LicenseController extends Controller
         }
 
         $normalizedDomain = Activation::normalizeDomain($request->domain);
+
+        // Valider le domaine (bloquer localhost, IPs privees, etc.)
+        $allowDev = config('app.env') !== 'production';
+        $domainValidation = $this->domainValidator->validate($normalizedDomain, $allowDev);
+
+        if (!$domainValidation['valid']) {
+            return response()->json([
+                'success' => false,
+                'message' => $this->translateDomainError($domainValidation['reason']),
+                'reason' => $domainValidation['reason'],
+            ], 400);
+        }
+
+        // Avertissement si domaine de dev en production
+        $isDev = $domainValidation['is_dev'] ?? false;
 
         // Vérifier si déjà activé sur ce domaine
         $existingActivation = $license->activations()
@@ -388,6 +405,19 @@ class LicenseController extends Controller
             'expired' => 'expirée',
             'revoked' => 'révoquée',
             default => $status,
+        };
+    }
+
+    private function translateDomainError(string $reason): string
+    {
+        return match ($reason) {
+            'empty_domain' => 'Le domaine ne peut pas être vide',
+            'blacklisted_domain' => 'Ce domaine n\'est pas autorisé (localhost, test, etc.)',
+            'private_ip' => 'Les adresses IP privées ne sont pas autorisées',
+            'dev_domain' => 'Les domaines de développement ne sont pas autorisés en production',
+            'no_tld' => 'Le domaine doit avoir une extension valide (ex: .com, .fr)',
+            'invalid_format' => 'Le format du domaine est invalide',
+            default => 'Domaine invalide',
         };
     }
 }

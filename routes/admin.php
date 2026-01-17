@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ApiTokenController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\LicenseController;
+use App\Http\Controllers\Admin\PasskeyController;
 use App\Http\Controllers\Admin\PriceController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProfileController;
@@ -24,7 +25,11 @@ use Illuminate\Support\Facades\Route;
 // Auth routes (publiques)
 Route::middleware('guest:admin')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('admin.login');
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:admin-login');
+
+    // Passkey authentication
+    Route::post('/passkey/login-options', [PasskeyController::class, 'loginOptions'])->name('admin.passkey.login-options');
+    Route::post('/passkey/login', [PasskeyController::class, 'login'])->name('admin.passkey.login');
 });
 
 // Routes protégées
@@ -69,4 +74,10 @@ Route::middleware('admin')->group(function () {
     Route::get('profile', [ProfileController::class, 'edit'])->name('admin.profile.edit');
     Route::put('profile', [ProfileController::class, 'update'])->name('admin.profile.update');
     Route::put('profile/password', [ProfileController::class, 'updatePassword'])->name('admin.profile.password');
+
+    // Passkeys management
+    Route::get('passkeys', [PasskeyController::class, 'index'])->name('admin.passkeys.index');
+    Route::post('passkeys/register-options', [PasskeyController::class, 'registerOptions'])->name('admin.passkeys.register-options');
+    Route::post('passkeys', [PasskeyController::class, 'register'])->name('admin.passkeys.register');
+    Route::delete('passkeys/{id}', [PasskeyController::class, 'destroy'])->name('admin.passkeys.destroy');
 });

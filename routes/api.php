@@ -24,22 +24,23 @@ Route::post('/auth/check-email', [AuthController::class, 'checkEmail']);
 Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle']);
 
 // Routes licences (appelées par les plugins WordPress installés - pas d'auth requise)
-Route::prefix('license')->group(function () {
-    Route::post('/verify', [LicenseController::class, 'verify']);
-    Route::post('/activate', [LicenseController::class, 'activate']);
-    Route::post('/deactivate', [LicenseController::class, 'deactivate']);
+// HMAC signature optionnelle pour l'instant (mode: optional), peut etre rendu obligatoire avec hmac:required
+Route::prefix('license')->middleware('hmac')->group(function () {
+    Route::post('/verify', [LicenseController::class, 'verify'])->middleware('throttle:license-verify');
+    Route::post('/activate', [LicenseController::class, 'activate'])->middleware('throttle:license-action');
+    Route::post('/deactivate', [LicenseController::class, 'deactivate'])->middleware('throttle:license-action');
 });
 
 // Routes mises à jour (appelées par les plugins WordPress installés)
-Route::prefix('update')->group(function () {
-    Route::post('/check', [UpdateController::class, 'checkUpdate']);
+Route::prefix('update')->middleware('hmac')->group(function () {
+    Route::post('/check', [UpdateController::class, 'checkUpdate'])->middleware('throttle:update-check');
     Route::get('/download', [UpdateController::class, 'download'])->name('api.update.download');
 });
 
 // Routes authentifiées par API Token (pour les sites de vente WordPress)
 Route::middleware('api.token')->group(function () {
     // Authentification SSO
-    Route::prefix('auth')->group(function () {
+    Route::prefix('auth')->middleware('throttle:api-auth')->group(function () {
         Route::post('/register', [AuthController::class, 'register']);
         Route::post('/login', [AuthController::class, 'login']);
     });
