@@ -128,7 +128,10 @@
                             // Headers personnalises
                             headers: {
                                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json',
                             },
+                            // Options fetch pour envoyer les cookies de session
+                            credentials: 'same-origin',
                             // Donnees supplementaires a envoyer avec l'enregistrement
                             body: {
                                 name: passkeyNameInput.value || 'Cle de securite',

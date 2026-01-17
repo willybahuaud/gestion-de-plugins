@@ -88,7 +88,9 @@
                         {
                             headers: {
                                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json',
                             },
+                            credentials: 'same-origin',
                             // Envoyer l'email pour les options
                             optionsBody: {
                                 email: email,
