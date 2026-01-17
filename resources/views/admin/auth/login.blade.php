@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connexion Admin - Plugin Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@laragear/webpass@2/dist/webpass.js" defer></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center">
     <div class="max-w-md w-full bg-white rounded-lg shadow-md p-8">
@@ -62,12 +61,39 @@
         </form>
     </div>
 
-    <script defer>
+    <script>
         document.addEventListener('DOMContentLoaded', () => {
             const loginPasskeyButton = document.getElementById('login-passkey');
             const emailInput = document.getElementById('email');
             const errorDiv = document.getElementById('passkey-error');
             const passkeyButtonHtml = loginPasskeyButton.innerHTML;
+            const csrfToken = '{{ csrf_token() }}';
+
+            // Helpers pour encoder/decoder base64url
+            function base64urlToBuffer(base64url) {
+                const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+                const padding = '='.repeat((4 - base64.length % 4) % 4);
+                const binary = atob(base64 + padding);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                    bytes[i] = binary.charCodeAt(i);
+                }
+                return bytes.buffer;
+            }
+
+            function bufferToBase64url(buffer) {
+                const bytes = new Uint8Array(buffer);
+                let binary = '';
+                for (let i = 0; i < bytes.length; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+            }
+
+            function showError(message) {
+                errorDiv.querySelector('p').textContent = message;
+                errorDiv.classList.remove('hidden');
+            }
 
             loginPasskeyButton.addEventListener('click', async () => {
                 const email = emailInput.value;
@@ -81,34 +107,84 @@
                 loginPasskeyButton.textContent = 'En attente de la cle...';
 
                 try {
-                    // Utiliser Webpass pour l'assertion (authentification)
-                    const result = await Webpass.assert(
-                        '{{ route('admin.passkey.login-options') }}',
-                        '{{ route('admin.passkey.login') }}',
-                        {
-                            headers: {
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'Accept': 'application/json',
-                            },
-                            credentials: 'same-origin',
-                            // Envoyer l'email pour les options
-                            optionsBody: {
-                                email: email,
-                            },
-                            // Envoyer remember avec l'assertion
-                            body: {
-                                remember: document.getElementById('remember').checked,
-                            },
-                        }
-                    );
+                    // 1. Recuperer les options d'authentification
+                    const optionsResponse = await fetch('{{ route('admin.passkey.login-options') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ email: email }),
+                    });
 
-                    if (result.success && result.data?.redirect) {
-                        window.location.href = result.data.redirect;
+                    if (!optionsResponse.ok) {
+                        const errorData = await optionsResponse.json().catch(() => ({}));
+                        throw new Error(errorData.error || `Erreur serveur (${optionsResponse.status})`);
+                    }
+
+                    const options = await optionsResponse.json();
+
+                    // 2. Convertir les options pour l'API WebAuthn
+                    const publicKeyOptions = {
+                        challenge: base64urlToBuffer(options.challenge),
+                        timeout: options.timeout,
+                        rpId: options.rpId,
+                        userVerification: options.userVerification || 'preferred',
+                        allowCredentials: (options.allowCredentials || []).map(cred => ({
+                            id: base64urlToBuffer(cred.id),
+                            type: cred.type,
+                            transports: cred.transports,
+                        })),
+                    };
+
+                    // 3. Authentifier via l'API WebAuthn du navigateur
+                    const credential = await navigator.credentials.get({
+                        publicKey: publicKeyOptions,
+                    });
+
+                    // 4. Encoder la reponse pour l'envoyer au serveur
+                    const assertionResponse = {
+                        id: credential.id,
+                        rawId: bufferToBase64url(credential.rawId),
+                        type: credential.type,
+                        response: {
+                            clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
+                            authenticatorData: bufferToBase64url(credential.response.authenticatorData),
+                            signature: bufferToBase64url(credential.response.signature),
+                            userHandle: credential.response.userHandle ? bufferToBase64url(credential.response.userHandle) : null,
+                        },
+                        remember: document.getElementById('remember').checked,
+                    };
+
+                    // 5. Envoyer au serveur pour verification
+                    const loginResponse = await fetch('{{ route('admin.passkey.login') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify(assertionResponse),
+                    });
+
+                    if (!loginResponse.ok) {
+                        const errorData = await loginResponse.json().catch(() => ({}));
+                        throw new Error(errorData.error || `Erreur serveur (${loginResponse.status})`);
+                    }
+
+                    const result = await loginResponse.json();
+
+                    if (result.success && result.redirect) {
+                        window.location.href = result.redirect;
                     } else if (result.success) {
                         window.location.href = '{{ route('admin.dashboard') }}';
                     } else {
-                        throw new Error(result.error?.message || result.error || 'Authentification echouee');
+                        throw new Error(result.error || 'Authentification echouee');
                     }
+
                 } catch (error) {
                     console.error('WebAuthn error:', error);
                     let message = 'Une erreur est survenue';
@@ -125,11 +201,6 @@
                     loginPasskeyButton.innerHTML = passkeyButtonHtml;
                 }
             });
-
-            function showError(message) {
-                errorDiv.querySelector('p').textContent = message;
-                errorDiv.classList.remove('hidden');
-            }
         });
     </script>
 </body>
