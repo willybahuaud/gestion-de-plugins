@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
+use App\Models\AuditLog;
 use Illuminate\Contracts\Support\Responsable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -81,6 +82,8 @@ class PasskeyController extends Controller
         }
 
         $request->session()->regenerate();
+
+        AuditLog::log('login', Auth::guard('admin')->user(), null, ['method' => 'passkey']);
 
         return response()->json([
             'success' => true,

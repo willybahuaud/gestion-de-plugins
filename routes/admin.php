@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ApiTokenController;
+use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\LicenseController;
@@ -75,6 +76,9 @@ Route::middleware(['admin', 'guard:admin'])->group(function () {
 
     // API Tokens
     Route::resource('api-tokens', ApiTokenController::class)->names('admin.api-tokens')->only(['index', 'create', 'store', 'destroy']);
+
+    // Audit logs
+    Route::get('audit-logs', [AuditLogController::class, 'index'])->name('admin.audit-logs.index');
 
     // Profil admin
     Route::get('profile', [ProfileController::class, 'edit'])->name('admin.profile.edit');
