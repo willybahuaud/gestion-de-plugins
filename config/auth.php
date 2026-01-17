@@ -74,8 +74,9 @@ return [
         ],
 
         'admins' => [
-            'driver' => 'eloquent',
+            'driver' => 'eloquent-webauthn',
             'model' => App\Models\AdminUser::class,
+            'password_fallback' => true,
         ],
     ],
 
