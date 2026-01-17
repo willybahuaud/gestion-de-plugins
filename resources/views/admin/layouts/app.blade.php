@@ -162,23 +162,6 @@
             return response;
         };
 
-        // Inactivité : affiche la modal après SESSION_LIFETIME minutes sans interaction
-        const sessionLifetime = {{ config('session.lifetime', 30) }} * 60 * 1000; // en ms
-        let inactivityTimer = null;
-
-        function resetInactivityTimer() {
-            if (inactivityTimer) clearTimeout(inactivityTimer);
-            inactivityTimer = setTimeout(() => {
-                showModal();
-            }, sessionLifetime);
-        }
-
-        // Reset le timer sur toute interaction
-        ['click', 'keydown', 'scroll', 'mousemove'].forEach(event => {
-            document.addEventListener(event, resetInactivityTimer, { passive: true });
-        });
-        resetInactivityTimer();
-
         // Reconnexion avec passkey
         btnReconnect.addEventListener('click', async () => {
             const btnHtml = btnReconnect.innerHTML;
