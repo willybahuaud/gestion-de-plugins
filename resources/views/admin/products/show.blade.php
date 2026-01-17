@@ -50,31 +50,38 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="bg-white rounded-lg shadow">
-            <div class="px-6 py-4 border-b border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                 <h2 class="text-lg font-semibold text-gray-900">Prix</h2>
+                <a href="{{ route('admin.prices.create', $product) }}" class="text-sm bg-indigo-600 text-white px-3 py-1 rounded-md hover:bg-indigo-700">
+                    + Ajouter
+                </a>
             </div>
             <div class="divide-y divide-gray-200">
                 @forelse($product->prices as $price)
-                    <div class="px-6 py-4">
+                    <a href="{{ route('admin.prices.edit', [$product, $price]) }}" class="block px-6 py-4 hover:bg-gray-50">
                         <div class="flex justify-between items-center">
                             <div>
                                 <p class="font-medium">{{ $price->name }}</p>
                                 <p class="text-sm text-gray-500">
                                     {{ $price->formatted_amount }}
                                     @if($price->isRecurring())
-                                        / {{ $price->interval_count > 1 ? $price->interval_count . ' ' : '' }}{{ $price->interval }}(s)
+                                        / {{ $price->interval === 'year' ? 'an' : 'mois' }}
                                     @else
                                         (lifetime)
                                     @endif
+                                    - {{ $price->max_activations == 0 ? 'Sites illimites' : $price->max_activations . ' site(s)' }}
                                 </p>
                             </div>
                             <span class="px-2 py-1 text-xs rounded-full {{ $price->is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
                                 {{ $price->is_active ? 'Actif' : 'Inactif' }}
                             </span>
                         </div>
-                    </div>
+                    </a>
                 @empty
-                    <div class="px-6 py-4 text-gray-500">Aucun prix configure</div>
+                    <div class="px-6 py-4 text-gray-500">
+                        Aucun prix configure.
+                        <a href="{{ route('admin.prices.create', $product) }}" class="text-indigo-600 hover:underline">Ajouter un prix</a>
+                    </div>
                 @endforelse
             </div>
         </div>

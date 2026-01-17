@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ApiTokenController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\LicenseController;
+use App\Http\Controllers\Admin\PriceController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\UserController;
@@ -34,6 +35,13 @@ Route::middleware('admin')->group(function () {
 
     // Products
     Route::resource('products', ProductController::class)->names('admin.products');
+
+    // Prices (nested under products)
+    Route::get('products/{product}/prices/create', [PriceController::class, 'create'])->name('admin.prices.create');
+    Route::post('products/{product}/prices', [PriceController::class, 'store'])->name('admin.prices.store');
+    Route::get('products/{product}/prices/{price}/edit', [PriceController::class, 'edit'])->name('admin.prices.edit');
+    Route::put('products/{product}/prices/{price}', [PriceController::class, 'update'])->name('admin.prices.update');
+    Route::delete('products/{product}/prices/{price}', [PriceController::class, 'destroy'])->name('admin.prices.destroy');
 
     // Users (clients)
     Route::resource('users', UserController::class)->names('admin.users')->except(['create', 'store', 'destroy']);
