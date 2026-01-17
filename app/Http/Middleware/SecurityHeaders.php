@@ -31,13 +31,14 @@ class SecurityHeaders
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
         // Content Security Policy for admin pages
+        // Note: cdn.tailwindcss.com autorise temporairement - idealement compiler Tailwind localement
         if ($request->is('admin/*') || $request->is('admin')) {
             $csp = implode('; ', [
                 "default-src 'self'",
-                "script-src 'self' 'unsafe-inline'", // inline needed for Alpine.js and simple scripts
-                "style-src 'self' 'unsafe-inline'",  // inline needed for Tailwind
+                "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com",
+                "style-src 'self' 'unsafe-inline'",
                 "img-src 'self' data: https:",
-                "font-src 'self'",
+                "font-src 'self' https://fonts.gstatic.com",
                 "connect-src 'self'",
                 "frame-ancestors 'none'",
                 "base-uri 'self'",
