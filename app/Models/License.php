@@ -117,4 +117,28 @@ class License extends Model
 
         return max(0, $this->max_activations - $this->activations_count);
     }
+
+    /**
+     * Alias pour license_key (pour compatibilité API).
+     */
+    public function getUuidAttribute(): string
+    {
+        return $this->license_key;
+    }
+
+    /**
+     * Alias pour max_activations (pour compatibilité API).
+     */
+    public function getActivationsLimitAttribute(): int
+    {
+        return $this->max_activations;
+    }
+
+    /**
+     * Scope pour rechercher par UUID (license_key).
+     */
+    public function scopeWhereUuid($query, string $uuid)
+    {
+        return $query->where('license_key', $uuid);
+    }
 }

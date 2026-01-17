@@ -38,7 +38,7 @@ class LicenseController extends Controller
             ], 422);
         }
 
-        $license = License::where('uuid', $request->license_key)->first();
+        $license = License::where('license_key', $request->license_key)->first();
 
         if (!$license) {
             return response()->json([
@@ -142,7 +142,7 @@ class LicenseController extends Controller
             ], 422);
         }
 
-        $license = License::where('uuid', $request->license_key)->first();
+        $license = License::where('license_key', $request->license_key)->first();
 
         if (!$license) {
             return response()->json([
@@ -283,7 +283,7 @@ class LicenseController extends Controller
             ], 422);
         }
 
-        $license = License::where('uuid', $request->license_key)->first();
+        $license = License::where('license_key', $request->license_key)->first();
 
         if (!$license) {
             return response()->json([

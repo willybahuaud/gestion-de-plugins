@@ -13,16 +13,22 @@ class Activation extends Model
     protected $fillable = [
         'license_id',
         'domain',
+        'is_active',
+        'ip_address',
+        'local_ip',
         'activated_at',
         'last_check_at',
+        'deactivated_at',
         'plugin_version',
     ];
 
     protected function casts(): array
     {
         return [
+            'is_active' => 'boolean',
             'activated_at' => 'datetime',
             'last_check_at' => 'datetime',
+            'deactivated_at' => 'datetime',
         ];
     }
 
