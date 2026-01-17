@@ -62,6 +62,15 @@ Déploiement automatique via webhook GitHub :
 2. GitHub envoie webhook à `https://hub.wabeo.work/deploy.php`
 3. Le script exécute `git pull` + `composer install` + `artisan` commands
 
+### SSH Access
+```bash
+ssh sc4wabeodev@pesto.o2switch.net
+cd ~/hub-app
+```
+
+### Production URL
+https://hub.wabeo.work
+
 ## Development Constraints
 
 - Compatible hébergement mutualisé o2switch

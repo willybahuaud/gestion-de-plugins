@@ -87,26 +87,37 @@
         </div>
 
         <div class="bg-white rounded-lg shadow">
-            <div class="px-6 py-4 border-b border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                 <h2 class="text-lg font-semibold text-gray-900">Dernieres releases</h2>
+                <a href="{{ route('admin.releases.create', $product) }}" class="text-sm bg-indigo-600 text-white px-3 py-1 rounded-md hover:bg-indigo-700">
+                    + Ajouter
+                </a>
             </div>
             <div class="divide-y divide-gray-200">
                 @forelse($product->releases as $release)
-                    <div class="px-6 py-4">
+                    <a href="{{ route('admin.releases.show', [$product, $release]) }}" class="block px-6 py-4 hover:bg-gray-50">
                         <div class="flex justify-between items-center">
                             <div>
                                 <p class="font-medium font-mono">v{{ $release->version }}</p>
                                 <p class="text-sm text-gray-500">{{ $release->published_at?->format('d/m/Y') ?? 'Non publiee' }}</p>
                             </div>
-                            <span class="px-2 py-1 text-xs rounded-full {{ $release->isPublished() ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' }}">
+                            <span class="px-2 py-1 text-xs rounded-full {{ $release->isPublished() ? 'bg-green-100 text-green-800' : ($release->isScheduled() ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800') }}">
                                 {{ $release->isPublished() ? 'Publiee' : ($release->isScheduled() ? 'Planifiee' : 'Brouillon') }}
                             </span>
                         </div>
-                    </div>
+                    </a>
                 @empty
-                    <div class="px-6 py-4 text-gray-500">Aucune release</div>
+                    <div class="px-6 py-4 text-gray-500">
+                        Aucune release.
+                        <a href="{{ route('admin.releases.create', $product) }}" class="text-indigo-600 hover:underline">Creer la premiere</a>
+                    </div>
                 @endforelse
             </div>
+            @if($product->releases->count() > 0)
+                <div class="px-6 py-3 border-t border-gray-200 bg-gray-50">
+                    <a href="{{ route('admin.releases.index', $product) }}" class="text-sm text-indigo-600 hover:underline">Voir toutes les releases &rarr;</a>
+                </div>
+            @endif
         </div>
     </div>
 </x-admin-layout>

@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\LicenseController;
 use App\Http\Controllers\Admin\PriceController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProfileController;
+use App\Http\Controllers\Admin\ReleaseController;
 use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -42,6 +43,16 @@ Route::middleware('admin')->group(function () {
     Route::get('products/{product}/prices/{price}/edit', [PriceController::class, 'edit'])->name('admin.prices.edit');
     Route::put('products/{product}/prices/{price}', [PriceController::class, 'update'])->name('admin.prices.update');
     Route::delete('products/{product}/prices/{price}', [PriceController::class, 'destroy'])->name('admin.prices.destroy');
+
+    // Releases (nested under products)
+    Route::get('products/{product}/releases', [ReleaseController::class, 'index'])->name('admin.releases.index');
+    Route::get('products/{product}/releases/create', [ReleaseController::class, 'create'])->name('admin.releases.create');
+    Route::post('products/{product}/releases', [ReleaseController::class, 'store'])->name('admin.releases.store');
+    Route::get('products/{product}/releases/{release}', [ReleaseController::class, 'show'])->name('admin.releases.show');
+    Route::get('products/{product}/releases/{release}/edit', [ReleaseController::class, 'edit'])->name('admin.releases.edit');
+    Route::put('products/{product}/releases/{release}', [ReleaseController::class, 'update'])->name('admin.releases.update');
+    Route::delete('products/{product}/releases/{release}', [ReleaseController::class, 'destroy'])->name('admin.releases.destroy');
+    Route::get('products/{product}/releases/{release}/download', [ReleaseController::class, 'download'])->name('admin.releases.download');
 
     // Users (clients)
     Route::resource('users', UserController::class)->names('admin.users')->except(['create', 'store', 'destroy']);
