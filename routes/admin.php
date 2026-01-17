@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\LicenseController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -44,4 +45,9 @@ Route::middleware('admin')->group(function () {
 
     // API Tokens
     Route::resource('api-tokens', ApiTokenController::class)->names('admin.api-tokens')->only(['index', 'create', 'store', 'destroy']);
+
+    // Profil admin
+    Route::get('profile', [ProfileController::class, 'edit'])->name('admin.profile.edit');
+    Route::put('profile', [ProfileController::class, 'update'])->name('admin.profile.update');
+    Route::put('profile/password', [ProfileController::class, 'updatePassword'])->name('admin.profile.password');
 });

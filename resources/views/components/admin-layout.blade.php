@@ -23,8 +23,10 @@
                         <a href="{{ route('admin.api-tokens.index') }}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500 {{ request()->routeIs('admin.api-tokens.*') ? 'bg-indigo-700' : '' }}">API Tokens</a>
                     </div>
                 </div>
-                <div class="flex items-center">
-                    <span class="text-sm mr-4">{{ Auth::guard('admin')->user()->name }}</span>
+                <div class="flex items-center space-x-4">
+                    <a href="{{ route('admin.profile.edit') }}" class="text-sm hover:underline {{ request()->routeIs('admin.profile.*') ? 'underline' : '' }}">
+                        {{ Auth::guard('admin')->user()->name }}
+                    </a>
                     <form action="{{ route('admin.logout') }}" method="POST" class="inline">
                         @csrf
                         <button type="submit" class="text-sm hover:underline">Deconnexion</button>
