@@ -32,11 +32,8 @@ class PasskeyController extends Controller
      */
     public function registerOptions(AttestationRequest $request): JsonResponse
     {
-        $admin = Auth::guard('admin')->user();
-
-        return response()->json(
-            $request->toCreate($admin)
-        );
+        // Le middleware guard:admin permet à $request->user() de fonctionner
+        return response()->json($request->toCreate());
     }
 
     /**
@@ -44,18 +41,17 @@ class PasskeyController extends Controller
      */
     public function register(AttestedRequest $request): JsonResponse
     {
-        $admin = Auth::guard('admin')->user();
-        $name = $request->input('name', 'Ma cle de securite');
+        $alias = $request->input('name', 'Ma cle de securite');
 
-        $credential = $request->save($admin);
-        $credential->update(['name' => $name]);
+        // save() utilise $request->user() automatiquement grâce au middleware guard:admin
+        $credential = $request->save(['alias' => $alias]);
 
         return response()->json([
             'success' => true,
             'message' => 'Passkey enregistree avec succes.',
             'credential' => [
                 'id' => $credential->id,
-                'name' => $credential->name,
+                'alias' => $credential->alias,
                 'created_at' => $credential->created_at->format('d/m/Y H:i'),
             ],
         ]);
