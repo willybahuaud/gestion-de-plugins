@@ -764,9 +764,3 @@ Sous-domaine de `wabeo.work` (ex: `api.wabeo.work`, `hub.wabeo.work`, etc.)
 | Hébergement initial | o2switch mutualisé |
 | SSO | Custom JWT (pas OAuth2 complet) |
 | Back-office | Laravel natif (Blade/Livewire) |
-
----
-
-*Document validé le : ____________________*
-
-*Signature : ____________________*

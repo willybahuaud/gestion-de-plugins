@@ -562,7 +562,7 @@ Plugin WP                              Plateforme
     │     Body:                             │
     │       license_key, domain, slug       │
     │                                       │
-    │                                  ┌────┴────┐
+    │                                  ┌────┴─────┐
     │                                  │ Vérifier │
     │                                  ├──────────┤
     │                                  │ 1. Timestamp < 5min ?
@@ -574,9 +574,9 @@ Plugin WP                              Plateforme
     │                                  │ 7. Produit correspond ?
     │                                  │ 8. Domaine autorisé ?
     │                                  │ 9. Quota activations OK ?
-    │                                  └────┬────┘
+    │                                  └────┬─────┘
     │                                       │
-    │◄───── 200 OK ────────────────────────┤
+    │◄───── 200 OK ─────────────────────────┤
     │       {                               │
     │         "valid": true,                │
     │         "license": {...},             │
