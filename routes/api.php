@@ -43,6 +43,8 @@ Route::middleware('api.token')->group(function () {
     Route::prefix('auth')->middleware('throttle:api-auth')->group(function () {
         Route::post('/register', [AuthController::class, 'register']);
         Route::post('/login', [AuthController::class, 'login']);
+        Route::post('/password/forgot', [AuthController::class, 'forgotPassword']);
+        Route::post('/password/reset', [AuthController::class, 'resetPassword']);
     });
 
     // Stripe - Création de checkout (appelé par les sites WordPress)
