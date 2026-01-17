@@ -125,6 +125,11 @@ class LicenseApiTest extends TestCase
             "Product ID mismatch: " . $debugInfo . " | Response: " . $response->getContent()
         );
 
+        // Debug: vérifier que le produit peut être trouvé par slug
+        $foundProduct = Product::where('slug', $this->product->slug)->first();
+        $this->assertNotNull($foundProduct, "Product not found by slug: " . $this->product->slug);
+        $this->assertEquals($this->product->id, $foundProduct->id, "Found product has different ID");
+
         $response->assertOk()
             ->assertJson([
                 'success' => true,
