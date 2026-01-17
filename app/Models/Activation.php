@@ -40,8 +40,11 @@ class Activation extends Model
     /**
      * Normalise un domaine (supprime www, protocole, trailing slash)
      */
-    public static function normalizeDomain(string $domain): string
+    public static function normalizeDomain(?string $domain): string
     {
+        if ($domain === null) {
+            return '';
+        }
         $domain = strtolower(trim($domain));
         $domain = preg_replace('#^https?://#', '', $domain);
         $domain = preg_replace('#^www\.#', '', $domain);

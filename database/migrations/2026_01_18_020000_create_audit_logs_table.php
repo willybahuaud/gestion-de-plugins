@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('audit_logs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('admin_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('admin_id')->nullable()->constrained('admin_users')->nullOnDelete();
             $table->string('action'); // created, updated, deleted, login, logout, etc.
             $table->string('model_type')->nullable(); // App\Models\Product, etc.
             $table->unsignedBigInteger('model_id')->nullable();
